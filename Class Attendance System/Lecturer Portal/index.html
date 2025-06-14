@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance System</title>
+    <link rel="stylesheet" href="index.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <section>
+        <nav>
+            <li class="create-attendance-menu">Create Attendance</li>
+            <li class="view-active-attendance-menu">View Active Attendance</li>
+            <li class="history-menu">History</li>
+        </nav>
+
+        <div class="modal ca-modal">
+            <button class="close-ca-modal">
+                <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="create-attendance">
+                <h1>Create Attendance</h1>
+                <form>
+                    <div class="input-container">
+                        <input type="text" id="class-name" required>
+                        <label for="class-name">Enter Class Name</label>
+                    </div>
+                    <div class="input-container">
+                        <input type="text" id="course-name" required>
+                        <label for="course-name">Enter Course Name</label>
+                    </div>
+                    <div class="input-container">
+                        <input type="date" id="date" class="time-input" data-placeholder="Enter Date" required>
+                        <label for="date">Enter Date</label>
+                    </div>
+                    <div class="input-container">
+                        <input type="time" id="start-time" class="time-input" data-placeholder="Start Time" required>
+                        <label for="start-time">Start Time</label>
+                    </div>
+                    <div class="input-container">
+                        <input type="time" id="end-time" class="time-input" data-placeholder="End Time" required>
+                        <label for="end-time">End Time</label>
+                    </div>
+                    <button type="submit" class="create-btn">Create</button>
+                </form>
+            </div>
+            <div class="qr-code-page qr-hide">
+                <div id="qrCodeContainer"></div>
+                <div class="button-container">
+                    <button class="share-btn" title="Share QR Code">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        </svg>
+                    </button>
+                    <button class="save-btn" title="Save QR Code">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal vaa-modal">
+            <button class="close-vaa-modal">
+                <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="view-active-attendance">
+                <h1 class="title">View Active Attendance</h1>
+                <table id="active-attendance-table">
+                    <tr>
+                        <th>Class</th>
+                        <th>Course</th>
+                        <th>Time Left</th>
+                        <th></th>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal history-modal">
+            <button class="close-history-modal">
+                <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="history">
+                <h1 class="title">Attendance History</h1>
+                <table id="history-table">
+                    <tr>
+                        <th>Class</th>
+                        <th>Course</th>
+                        <th>Date</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </section>
+    <script src="index.js"></script>
+</body>
+</html>

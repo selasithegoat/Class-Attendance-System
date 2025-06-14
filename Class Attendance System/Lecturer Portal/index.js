@@ -167,14 +167,15 @@ createBtn.addEventListener("click", function (event) {
     const qrContainer = document.getElementById("qrCodeContainer");
     qrContainer.innerHTML = "";
 
-    // Generate QR Code
+    // Generate QR Code with quiet zone
     new QRCode(qrContainer, {
         text: qrUrl,
         width: 250,
         height: 250,
         colorDark: "#000000",
         colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.H,
+        margin: 10 // Explicitly set quiet zone (in pixels, ~4 modules for 250x250 QR)
     });
 
     // Show QR code section
@@ -206,8 +207,23 @@ createBtn.addEventListener("click", function (event) {
     saveBtn.addEventListener("click", function () {
         const qrCanvas = qrContainer.querySelector("canvas");
         if (qrCanvas) {
+            // Create a new canvas to add extra padding for the quiet zone
+            const paddedCanvas = document.createElement("canvas");
+            const padding = 20; // Additional padding in pixels for saved image
+            const ctx = paddedCanvas.getContext("2d");
+            paddedCanvas.width = qrCanvas.width + padding * 2;
+            paddedCanvas.height = qrCanvas.height + padding * 2;
+
+            // Fill background with white to ensure quiet zone is visible
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, paddedCanvas.width, paddedCanvas.height);
+
+            // Draw the QR code canvas onto the padded canvas
+            ctx.drawImage(qrCanvas, padding, padding);
+
+            // Save the padded canvas
             const link = document.createElement("a");
-            link.href = qrCanvas.toDataURL("image/png");
+            link.href = paddedCanvas.toDataURL("image/png");
             link.download = `QR_Attendance_${className}_${courseName}_${date}.png`;
             link.click();
         } else {

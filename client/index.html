@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecturer Portal</title>
+    <link rel="stylesheet" href="index.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="index.js" defer></script>
+</head>
+<body>
+    <section class="main-section">
+        <header class="header">
+            <div class="lecturer-info">
+                <span class="lecturer-name" id="lecturer-name">Welcome</span>
+            </div>
+            <button class="logout-btn" id="logout-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--main-text-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Logout
+            </button>
+        </header>
+        <div class="content-card">
+            <div class="welcome-message" id="welcome-message">Welcome back! Ready to manage your classes?</div>
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <h3>Active Sessions</h3>
+                    <p id="active-sessions">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Sessions Today</h3>
+                    <p id="sessions-today">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Students Marked</h3>
+                    <p id="students-marked">0</p>
+                </div>
+            </div>
+            <nav>
+                <ul>
+                    <li class="create-attendance-menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 5v14M5 12h14"></path>
+                        </svg>
+                        Create Attendance
+                    </li>
+                    <li class="view-active-attendance-menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        View Active Attendance
+                    </li>
+                    <li class="history-menu">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 8v4l3 3"></path>
+                            <circle cx="12" cy="12" r="10"></circle>
+                        </svg>
+                        History
+                    </li>
+                </ul>
+            </nav>
+            <div class="modal vaa-modal">
+                <button class="close-vaa-modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="view-active-attendance">
+                    <h1 class="title">View Active Attendance</h1>
+                    <table id="active-attendance-table">
+                        <tr>
+                            <th>Class</th>
+                            <th>Course</th>
+                            <th>Time Left</th>
+                            <th></th>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="modal history-modal">
+                <button class="close-history-modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="history">
+                    <h1 class="title">Attendance History</h1>
+                    <table id="history-table">
+                        <tr>
+                            <th>Class</th>
+                            <th>Course</th>
+                            <th>Date</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="ca-modal">
+                <button class="close-ca-modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+                <div class="create-attendance">
+                    <h1>Create Attendance</h1>
+                    <form>
+                        <div class="input-container">
+                            <input type="text" id="class-name" required data-placeholder="Enter Class Name">
+                            <label for="class-name">Enter Class Name</label>
+                        </div>
+                        <div class="input-container">
+                            <input type="text" id="course-name" required data-placeholder="Enter Course Name">
+                            <label for="course-name">Enter Course Name</label>
+                        </div>
+                        <div class="input-container">
+                            <input type="date" id="date" required data-placeholder="Enter Date">
+                            <label for="date">Enter Date</label>
+                        </div>
+                        <div class="input-container">
+                            <input type="time" id="start-time" class="time-input" required data-placeholder="Start Time">
+                            <label for="start-time">Start Time</label>
+                        </div>
+                        <div class="input-container">
+                            <input type="time" id="end-time" class="time-input" required data-placeholder="End Time">
+                            <label for="end-time">End Time</label>
+                        </div>
+                        <button type="submit" class="create-btn">Create</button>
+                    </form>
+                    <div class="qr-code-page qr-hide">
+                        <div id="qrCodeContainer"></div>
+                        <div class="button-container">
+                            <button class="share-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                    <circle cx="18" cy="5" r="3"></circle>
+                                    <circle cx="6" cy="12" r="3"></circle>
+                                    <circle cx="18" cy="19" r="3"></circle>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                                </svg>
+                                Share
+                            </button>
+                            <button class="save-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                    <path d="M19 9h-4V3H9v6H5l7 7 7-7z"></path>
+                                    <path d="M5 18v2h14v-2H5z"></path>
+                                </svg>
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script>
+        // Fetch lecturer name from localStorage
+        document.addEventListener('DOMContentLoaded', () => {
+            const lecturerId = localStorage.getItem('loggedInLecturerId');
+            const lecturerData = JSON.parse(localStorage.getItem('lecturers') || '{}');
+            if (lecturerId && lecturerData[lecturerId]) {
+                document.getElementById('lecturer-name').textContent = `Welcome, ${lecturerData[lecturers].name}`;
+            } else {
+                document.getElementById('lecturer-name').textContent = 'Welcome, Unknown';
+            }
+        });
+    </script>
+</body>
+</html>

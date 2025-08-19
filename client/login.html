@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecturer Login</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+    <section class="login-section">
+        <div class="login-container">
+            <h1>Lecturer Login</h1>
+            <p class="subtitle">Sign in to manage your attendance</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <input type="text" id="lecturer-id" required>
+                    <label>Lecturer ID</label>
+                    <span class="input-border"></span>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="password" required>
+                    <label>Password</label>
+                    <span class="input-border"></span>
+                </div>
+                <button type="submit">Login</button>
+                <p id="login-status" class="status"></p>
+            </form>
+        </div>
+    </section>
+    <script src="login.js"></script>
+</body>
+</html>

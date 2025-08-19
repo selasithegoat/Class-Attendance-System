@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance Portal</title>
+    <link rel="stylesheet" href="student-portal.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <section class="portal-section">
+        <div class="portal-container">
+            <div class="header">
+                <h1>Attendance Portal</h1>
+                <p class="subtitle">Scan the QR code to mark your attendance</p>
+            </div>
+            <div class="qr-scanner">
+                <div class="scanner-frame">
+                    <video id="video" width="300" height="300" style="display: none;"></video>
+                    <canvas id="canvas" style="display: none;"></canvas>
+                    <div class="scanner-overlay"></div>
+                </div>
+                <button id="start-scanner">Scan QR Code</button>
+                <p id="scan-status">Tap to start scanning</p>
+            </div>
+            <div id="attendance-container" style="display: none;">
+                <h2>Confirm Your Attendance</h2>
+                <div id="class-info" class="class-info"></div>
+                <form id="attendance-form">
+                    <div class="input-group">
+                        <input type="text" id="student-name" required autocomplete="off">
+                        <label for="student-name">Full Name</label>
+                        <span class="input-border"></span>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="index-number" required autocomplete="off">
+                        <label for="index-number">Index Number</label>
+                        <span class="input-border"></span>
+                    </div>
+                    <div class="button-group">
+                        <button type="button" id="cancel-btn">Cancel</button>
+                        <button type="submit">Confirm</button>
+                    </div>
+                </form>
+                <p id="attendance-status"></p>
+            </div>
+        </div>
+        <div id="success-popup" class="popup">Attendance taken successfully</div>
+    </section>
+    <script src="student-portal.js"></script>
+</body>
+</html>

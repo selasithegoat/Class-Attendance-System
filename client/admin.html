@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal</title>
+    <link rel="stylesheet" href="index.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--main-page-bg-color) 0%, #25294A 100%);
+            animation: gradientShift 15s ease infinite;
+        }
+        .admin-container {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        header h1 {
+            font-size: 2rem;
+            color: var(--main-text-color);
+        }
+        #logout {
+            padding: 0.5rem 1rem;
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        #logout:hover {
+            background: #e08933;
+        }
+        .auth-section {
+            background: var(--sec-page-bg-color);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            max-width: 400px;
+            margin: 0 auto 2rem;
+        }
+        .auth-section h2 {
+            text-align: center;
+            margin-bottom: 1rem;
+            color: var(--main-text-color);
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .tabs button {
+            padding: 0.5rem 1.5rem;
+            background: var(--2nd-sec-page-bg-color);
+            color: var(--main-text-color);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+        .tabs button.active {
+            background: var(--accent-color);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+        .input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 8px;
+            color: var(--main-text-color);
+            font-size: var(--pri-font-size);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        .input-group input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 10px rgba(255, 154, 60, 0.3);
+        }
+        .input-group label {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: var(--pri-font-size);
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        .input-group input:focus + label,
+        .input-group input:valid + label {
+            top: -10px;
+            left: 10px;
+            font-size: 12px;
+            color: var(--accent-color);
+            background: var(--sec-page-bg-color);
+            padding: 0 4px;
+        }
+        form button[type="submit"] {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent-color);
+            color: #fff;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+        form button[type="submit"]:hover {
+            background: #e08933;
+            transform: translateY(-2px);
+        }
+        #auth-status {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--accent-color);
+        }
+        .admin-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            .admin-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        .create-lecturer, .lecturer-accounts {
+            background: var(--sec-page-bg-color);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+        .create-lecturer h3, .lecturer-accounts h3 {
+            margin-bottom: 1.5rem;
+            color: var(--main-text-color);
+            text-align: center;
+        }
+        #create-lecturer-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        #create-lecturer-form input {
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 8px;
+            color: var(--main-text-color);
+        }
+        .search-sort {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        #search-input {
+            flex: 1;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 8px;
+            color: var(--main-text-color);
+        }
+        #sort-select {
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 8px;
+            color: var(--main-text-color);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--main-text-color);
+        }
+        th {
+            color: var(--accent-color);
+        }
+        .edit-btn, .delete-btn {
+            padding: 0.25rem 0.75rem;
+            margin-right: 0.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .edit-btn {
+            background: var(--accent-color);
+            color: #fff;
+        }
+        .edit-btn:hover {
+            background: #e08933;
+        }
+        .delete-btn {
+            background: #e63946;
+            color: #fff;
+        }
+        .delete-btn:hover {
+            background: #d32f2f;
+        }
+        .edit-lecturer, .confirm-deletion {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .edit-lecturer.active, .confirm-deletion.active {
+            display: flex;
+        }
+        .edit-form, .confirm-box {
+            background: var(--sec-page-bg-color);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            max-width: 400px;
+            width: 90%;
+        }
+        .edit-form h3, .confirm-box p {
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: var(--main-text-color);
+        }
+        #edit-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        #edit-form input {
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 8px;
+            color: var(--main-text-color);
+        }
+        .edit-form button, .confirm-box button {
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        #cancel-edit, #cancel-delete {
+            background: #6c757d;
+            color: #fff;
+            margin-right: 1rem;
+        }
+        #cancel-edit:hover, #cancel-delete:hover {
+            background: #5a6268;
+        }
+        #edit-form button[type="submit"], #confirm-delete {
+            background: var(--accent-color);
+            color: #fff;
+        }
+        #edit-form button[type="submit"]:hover, #confirm-delete:hover {
+            background: #e08933;
+        }
+        footer {
+            text-align: center;
+            padding: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <header>
+            <span id="admin-name"></span>
+            <button id="logout" style="display: none;">Logout</button>
+        </header>
+
+        <section class="auth-section">
+            <h2>Admin Authentication</h2>
+            <div class="tabs">
+                <button id="tab-login" class="active">Login</button>
+                <button id="tab-register">Register</button>
+            </div>
+            <div id="admin-login">
+                <form id="admin-login-form">
+                    <div class="input-group">
+                        <input id="login-username" required>
+                        <label>Username</label>
+                    </div>
+                    <div class="input-group">
+                        <input id="login-password" type="password" required>
+                        <label>Password</label>
+                    </div>
+                    <button type="submit">Login</button>
+                    <p id="login-status" style="color: #e08933; margin-top: 10px;"></p>
+                </form>
+            </div>
+            <div id="admin-register" style="display: none;">
+                <form id="admin-register-form">
+                    <div class="input-group">
+                        <input id="register-username" required>
+                        <label>Username</label>
+                    </div>
+                    <div class="input-group">
+                        <input id="register-password" type="password" required>
+                        <label>Password</label>
+                    </div>
+                    <div class="input-container">
+                        <input type="password" id="register-secret-key" required data-placeholder="Enter Secret Key">
+                        <label for="secret-key">Secret Key</label>
+                      </div>
+                      
+                    <button type="submit">Register</button>
+                    <p id="register-status" style="color: #e08933; margin-top: 10px;"></p>
+                </form>
+            </div>
+            <p id="auth-status"></p>
+        </section>
+
+        <div class="admin-content" style="display: none;">
+            <section class="create-lecturer">
+                <h3>Create Lecturer Account</h3>
+                <form id="create-lecturer-form">
+                    <input id="create-lecturer-id" placeholder="Lecturer ID" required>
+                    <input id="create-name" placeholder="Name" required>
+                    <input id="create-password" type="password" placeholder="Password" required>
+                    <button type="submit">Create Account</button>
+                </form>
+            </section>
+
+            <section class="lecturer-accounts">
+                <h3>Lecturer Accounts</h3>
+                <div class="search-sort">
+                    <input id="search-input" placeholder="Search by ID or Name">
+                    <select id="sort-select">
+                        <option value="id-asc">ID (A-Z)</option>
+                        <option value="id-desc">ID (Z-A)</option>
+                        <option value="name-asc">Name (A-Z)</option>
+                        <option value="name-desc">Name (Z-A)</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Lecturer ID</th>
+                            <th>Name</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lecturer-table-body">
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <div class="edit-lecturer">
+            <div class="edit-form">
+                <h3>Edit Lecturer</h3>
+                <form id="edit-form">
+                    <input id="edit-lecturer-id" placeholder="Lecturer ID" required>
+                    <input id="edit-name" placeholder="Name" required>
+                    <input id="edit-password" type="password" placeholder="Password (leave blank to keep unchanged)">
+                    <button type="button" id="cancel-edit">Cancel</button>
+                    <button type="submit">Save</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="confirm-deletion">
+            <div class="confirm-box">
+                <p>Are you sure you want to delete this lecturer?</p>
+                <button id="cancel-delete">Cancel</button>
+                <button id="confirm-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>© 2025 Attendance System. All rights reserved.</footer>
+
+    <script>
+   let lecturers = [];
+    let editingId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem('token');
+        const authSection = document.querySelector('.auth-section');
+        const adminContent = document.querySelector('.admin-content');
+        const logoutBtn = document.getElementById('logout');
+        const status = document.getElementById('auth-status');
+        const adminNameSpan = document.getElementById('admin-name');
+
+        function showAuth() {
+            authSection.style.display = 'block';
+            adminContent.style.display = 'none';
+            logoutBtn.style.display = 'none';
+        }
+
+        function showAdmin(admin) {
+            authSection.style.display = 'none';
+            adminContent.style.display = 'grid';
+            logoutBtn.style.display = 'block';
+            if (admin?.username) {
+                adminNameSpan.textContent = `Welcome, ${admin.username}`;
+            }
+            loadLecturers();
+        }
+
+        // Auto-login check
+        if (token) {
+            fetch('/api/auth/admin/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).then(res => {
+                if (!res.ok) throw new Error('Invalid token');
+                return res.json();
+            }).then(data => {
+                if (data.isAdmin) {
+                    showAdmin(data);
+                } else {
+                    localStorage.removeItem('token');
+                    showAuth();
+                }
+            }).catch(() => {
+                localStorage.removeItem('token');
+                showAuth();
+            });
+        } else {
+            showAuth();
+        }
+
+        // Tab switching
+        document.getElementById('tab-login').addEventListener('click', () => {
+            document.getElementById('admin-login').style.display = 'block';
+            document.getElementById('admin-register').style.display = 'none';
+            document.getElementById('tab-login').classList.add('active');
+            document.getElementById('tab-register').classList.remove('active');
+        });
+
+        document.getElementById('tab-register').addEventListener('click', () => {
+            document.getElementById('admin-login').style.display = 'none';
+            document.getElementById('admin-register').style.display = 'block';
+            document.getElementById('tab-register').classList.add('active');
+            document.getElementById('tab-login').classList.remove('active');
+        });
+
+        // Admin Register
+        document.getElementById('admin-register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('register-username').value.trim();
+    const password = document.getElementById('register-password').value.trim();
+    const secretKey = document.getElementById('register-secret-key').value.trim();
+    const status = document.getElementById('register-status');
+
+    status.textContent = 'Registering...';
+
+    try {
+        const response = await fetch('/api/auth/admin/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, secretKey }) // ✅ include password
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            status.textContent = '✅ Admin registered successfully!';
+        } else {
+            status.textContent = data.message || '❌ Registration failed';
+        }
+    } catch (err) {
+        status.textContent = '🚨 Error: Unable to connect to server';
+        console.error('Register error:', err);
+    }
+});
+
+        
+        // Admin Login
+        document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value.trim();
+      const status = document.getElementById('login-status');
+
+      status.textContent = 'Logging in...';
+
+      try {
+        const response = await fetch('/api/auth/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          status.textContent = '✅ Login successful!';
+          localStorage.setItem('token', data.token);
+
+          // ✅ Immediately fetch current admin details
+          const meResponse = await fetch('/api/auth/admin/me', {
+            headers: { 'Authorization': `Bearer ${data.token}` }
+          });
+
+          if (meResponse.ok) {
+            const meData = await meResponse.json();
+            if (meData.isAdmin) {
+              document.querySelector('.auth-section')?.remove();
+              document.querySelector('.admin-content').style.display = 'block';
+              document.getElementById('logout').style.display = 'block';
+              document.getElementById('admin-name').textContent = meData.username;
+              
+
+            } else {
+              status.textContent = '❌ You are not authorized as an admin.';
+              localStorage.removeItem('token');
+            }
+          } else {
+            status.textContent = '❌ Failed to verify admin account.';
+          }
+        } else {
+          status.textContent = data.message || '❌ Invalid credentials';
+        }
+      } catch (err) {
+        status.textContent = '🚨 Error: Unable to connect to server';
+        console.error('Login error:', err);
+      }
+      fetchLecturers();
+
+    });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('token');
+            location.reload();
+        });
+
+        // Load Lecturers (Admin only)
+        async function loadLecturers() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/auth/admin/lecturers', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to fetch lecturers');
+                lecturers = await response.json();
+                renderLecturers(lecturers);
+            } catch (err) {
+                console.error('Error loading lecturers:', err);
+                alert('Error loading lecturers');
+            }
+        }
+
+        // Render Lecturers
+        function renderLecturers(data) {
+            const tableBody = document.getElementById('lecturer-table-body');
+            tableBody.innerHTML = '';
+            data.forEach(lec => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${lec.lecturerId}</td>
+                    <td>${lec.name || 'Unnamed'}</td>
+                    <td>${lec.lastUpdated ? new Date(lec.lastUpdated).toLocaleString() : 'N/A'}</td>
+                    <td>
+                        <button class="edit-btn" data-id="${lec._id}">Edit</button>
+                        <button class="delete-btn" data-id="${lec._id}">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+            });
+            document.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', handleEdit));
+            document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', handleDelete));
+        }
+
+            // Sort Lecturers
+            function sortLecturers(data, sortBy) {
+                return data.sort((a, b) => {
+                    if (sortBy === 'id-asc') return a.lecturerId.localeCompare(b.lecturerId);
+                    if (sortBy === 'id-desc') return b.lecturerId.localeCompare(a.lecturerId);
+                    if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+                    if (sortBy === 'name-desc') return b.name.localeCompare(a.name);
+                });
+            }
+
+            // Filter Lecturers
+            function filterLecturers(data, searchTerm) {
+                searchTerm = searchTerm.toLowerCase();
+                return data.filter(lec => 
+                    lec.lecturerId.toLowerCase().includes(searchTerm) || 
+                    lec.name.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // Handle Search
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                const searchTerm = e.target.value;
+                const sortBy = document.getElementById('sort-select').value;
+                let filtered = filterLecturers(lecturers, searchTerm);
+                filtered = sortLecturers(filtered, sortBy);
+                renderLecturers(filtered);
+            });
+
+            // Handle Sort
+            document.getElementById('sort-select').addEventListener('change', (e) => {
+                const sortBy = e.target.value;
+                const searchTerm = document.getElementById('search-input').value;
+                let filtered = filterLecturers(lecturers, searchTerm);
+                filtered = sortLecturers(filtered, sortBy);
+                renderLecturers(filtered);
+            });
+
+            // Create Lecturer
+            document.getElementById('create-lecturer-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const lecturerId = document.getElementById('create-lecturer-id').value.trim();
+                const name = document.getElementById('create-name').value.trim();
+                const password = document.getElementById('create-password').value.trim();
+                const token = localStorage.getItem('token');
+                try {
+                    const response = await fetch('/api/auth/register', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({
+                            lecturerId: document.getElementById('create-lecturer-id').value,
+                            name: document.getElementById('create-name').value,
+                            password: document.getElementById('create-password').value
+                        })
+                    
+                            });
+                            const data = await response.json();
+
+                        if (response.ok) {
+                            alert('Lecturer created successfully!');
+                        } else {
+                            alert('Error: ' + data.message);
+                        }
+                    } catch (err) {
+                        console.error('Error creating lecturer:', err);
+                        alert('Error creating lecturer');
+                    }
+            });
+
+            // Handle Edit Click
+            function handleEdit(e) {
+                editingId = e.target.dataset.id;
+                const lec = lecturers.find(l => l._id === editingId);
+                if (lec) {
+                    document.getElementById('edit-lecturer-id').value = lec.lecturerId;
+                    document.getElementById('edit-name').value = lec.name;
+                    document.getElementById('edit-password').value = '';
+                    document.querySelector('.edit-lecturer').classList.add('active');
+                }
+            }
+
+            // Cancel Edit
+            document.getElementById('cancel-edit').addEventListener('click', () => {
+                document.querySelector('.edit-lecturer').classList.remove('active');
+            });
+
+            // Save Edit
+            document.getElementById('edit-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const lecturerId = document.getElementById('edit-lecturer-id').value.trim();
+                const name = document.getElementById('edit-name').value.trim();
+                const password = document.getElementById('edit-password').value.trim();
+                const body = { lecturerId, name };
+                if (password) body.password = password;
+                const token = localStorage.getItem('token');
+                try {
+                    const response = await fetch(`/api/auth/lecturers/${editingId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(body)
+                    });
+                    if (response.ok) {
+                        alert('Lecturer updated successfully');
+                        document.querySelector('.edit-lecturer').classList.remove('active');
+                        loadLecturers();
+                    } else {
+                        const data = await response.json();
+                        alert(data.message || 'Failed to update lecturer');
+                    }
+                } catch (err) {
+                    alert('Error updating lecturer');
+                }
+            });
+
+            // Handle Delete Click
+            function handleDelete(e) {
+                editingId = e.target.dataset.id;
+                document.querySelector('.confirm-deletion').classList.add('active');
+            }
+
+            // Cancel Delete
+            document.getElementById('cancel-delete').addEventListener('click', () => {
+                document.querySelector('.confirm-deletion').classList.remove('active');
+            });
+
+            // Confirm Delete
+            document.getElementById('confirm-delete').addEventListener('click', async () => {
+                const token = localStorage.getItem('token');
+                try {
+                    const response = await fetch(`/api/auth/lecturers/${editingId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        alert('Lecturer deleted successfully');
+                        document.querySelector('.confirm-deletion').classList.remove('active');
+                        loadLecturers();
+                    } else {
+                        const data = await response.json();
+                        alert(data.message || 'Failed to delete lecturer');
+                    }
+                } catch (err) {
+                    alert('Error deleting lecturer');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

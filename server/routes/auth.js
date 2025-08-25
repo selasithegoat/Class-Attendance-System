@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Lecturer = require('../models/Lecturer');
 const Admin = require('../models/Admin');
+const Attendance = require('../models/Attendance');
 const router = express.Router();
 
 // ===================== Middleware =====================
@@ -234,15 +235,16 @@ router.put('/lecturers/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// ===================== Delete Lecturer =====================
-router.delete('/lecturers/:id', verifyAdmin, async (req, res) => {
+// DELETE attendance by ID
+router.delete('/:id', async (req, res) => {
   try {
-    const lecturer = await Lecturer.findByIdAndDelete(req.params.id);
-    if (!lecturer) return res.status(404).json({ message: 'Lecturer not found' });
-    if (lecturer.isAdmin) return res.status(403).json({ message: 'Cannot delete admin accounts' });
-
-    res.json({ message: 'Lecturer deleted successfully' });
+    const attendance = await Attendance.findByIdAndDelete(req.params.id);
+    if (!attendance) {
+      return res.status(404).json({ message: 'Attendance not found' });
+    }
+    res.json({ message: 'Attendance deleted successfully' });
   } catch (err) {
+    console.error('Error deleting attendance:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

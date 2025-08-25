@@ -479,17 +479,17 @@
         const response = await fetch('/api/auth/admin/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, secretKey }) // ✅ include password
+            body: JSON.stringify({ username, password, secretKey }) 
         });
 
         const data = await response.json();
         if (response.ok) {
-            status.textContent = '✅ Admin registered successfully!';
+            status.textContent = 'Admin registered successfully!';
         } else {
-            status.textContent = data.message || '❌ Registration failed';
+            status.textContent = data.message || 'Registration failed';
         }
     } catch (err) {
-        status.textContent = '🚨 Error: Unable to connect to server';
+        status.textContent = 'Error: Unable to connect to server';
         console.error('Register error:', err);
     }
 });
@@ -513,10 +513,10 @@
 
         const data = await response.json();
         if (response.ok) {
-          status.textContent = '✅ Login successful!';
+          status.textContent = 'Login successful!';
           localStorage.setItem('token', data.token);
 
-          // ✅ Immediately fetch current admin details
+          // Immediately fetch current admin details
           const meResponse = await fetch('/api/auth/admin/me', {
             headers: { 'Authorization': `Bearer ${data.token}` }
           });
@@ -531,17 +531,17 @@
               
 
             } else {
-              status.textContent = '❌ You are not authorized as an admin.';
+              status.textContent = 'You are not authorized as an admin.';
               localStorage.removeItem('token');
             }
           } else {
-            status.textContent = '❌ Failed to verify admin account.';
+            status.textContent = 'Failed to verify admin account.';
           }
         } else {
-          status.textContent = data.message || '❌ Invalid credentials';
+          status.textContent = data.message || 'Invalid credentials';
         }
       } catch (err) {
-        status.textContent = '🚨 Error: Unable to connect to server';
+        status.textContent = 'Error: Unable to connect to server';
         console.error('Login error:', err);
       }
       fetchLecturers();

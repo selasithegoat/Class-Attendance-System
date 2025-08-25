@@ -273,74 +273,109 @@ async function fetchLecturerInfo() {
                     <td>${attendance.status}</td>
                     <td>
                         ${attendance.status === 'Completed'
-                            ? `<button class="download-btn" data-id="${attendance._id}">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" 
-                                       fill="white" viewBox="0 0 24 24">
-                                      <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17h16v4H4z"
-                                            stroke="white" stroke-width="2" 
-                                            stroke-linecap="round" stroke-linejoin="round"/>
-                                  </svg>
-                               </button>`
-                            : `<button class="delete-btn" data-id="${attendance._id}"> 
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-           fill="white" viewBox="0 0 24 24">
-          <path d="M3 6h18M9 6V4h6v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12z" 
-                stroke="white" stroke-width="2" 
-                stroke-linecap="round" stroke-linejoin="round"/>
-      </svg></button>`}
+                            ? `<button class="download-btn" data-id="${attendance._id}"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+     viewBox="0 0 24 24" aria-hidden="true">
+  <path fill="currentColor" d="M11 3a1 1 0 0 1 2 0v8.586l2.293-2.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4A1 1 0 1 1 8.707 9.293L11 11.586V3z"/>
+  <path fill="currentColor" d="M4 19a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1z"/>
+</svg>
+</button>`
+                            : ''}
+                        <button class="delete-btn" data-id="${attendance._id}"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                        viewBox="0 0 24 24" aria-hidden="true">
+                     <path fill="currentColor" d="M9 3a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1h4a1 1 0 1 1 0 2h-1.1l-1.03 13.02A3 3 0 0 1 14.88 22H9.12a3 3 0 0 1-2.99-2.98L5.1 6H4a1 1 0 1 1 0-2h4V3Zm2 1h2V3h-2v1Z"/>
+                     <path fill="currentColor" d="M10 10a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1Zm4 0a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1Z"/>
+                   </svg>
+                   </button>
                     </td>
                 `;
                 tableBody.appendChild(row);
             });
-            
     
-            // Add click listeners for all download buttons
-document.querySelectorAll(".download-btn").forEach(btn => {
-    btn.addEventListener("click", async function () {
-        const attendanceId = this.getAttribute("data-id");
-        try {
-            const res = await fetch(`/api/attendance/download/${attendanceId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+            // ✅ Re-bind DELETE buttons
+            document.querySelectorAll(".delete-btn").forEach(btn => {
+                btn.addEventListener("click", async function () {
+                    const attendanceId = this.getAttribute("data-id");
+                    if (!confirm("Are you sure you want to delete this attendance record?")) return;
+    
+                    try {
+                        const res = await fetch(`/api/attendance/${attendanceId}`, {
+                            method: "DELETE",
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+    
+                        if (!res.ok) throw new Error("Failed to delete");
+    
+                        this.closest("tr").remove();
+                        console.log(`🗑 Deleted attendance ${attendanceId}`);
+                    } catch (err) {
+                        console.error("Delete error:", err.message);
+                        alert("Failed to delete attendance. Please try again.");
+                    }
+                });
             });
-            if (!res.ok) throw new Error("Failed to download");
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `Attendance_${attendanceId}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error("Download error:", err.message);
-        }
-    });
-});
-
-// Delete buttons
-document.querySelectorAll(".delete-btn").forEach(btn => {
-    btn.addEventListener("click", async function () {
-        const attendanceId = this.getAttribute("data-id");
-        if (!confirm("Are you sure you want to delete this attendance record?")) return;
-        try {
-            const res = await fetch(`/api/attendance/${attendanceId}`, {
-                method: "DELETE",
-                headers: { 'Authorization': `Bearer ${token}` }
+    
+            // ✅ Re-bind DOWNLOAD buttons
+            document.querySelectorAll(".download-btn").forEach(btn => {
+                btn.addEventListener("click", async function () {
+                    const attendanceId = this.getAttribute("data-id");
+    
+                    try {
+                        const res = await fetch(`/api/attendance/download/${attendanceId}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+    
+                        if (!res.ok) throw new Error("Failed to download");
+    
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `Attendance_${attendanceId}.xlsx`;
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+    
+                        console.log(`⬇ Downloaded attendance ${attendanceId}`);
+                    } catch (err) {
+                        console.error("Download error:", err.message);
+                    }
+                });
             });
-            if (!res.ok) throw new Error("Failed to delete");
-            this.closest("tr").remove(); // Remove row from table
-        } catch (err) {
-            console.error("Delete error:", err.message);
-        }
-    });
-});
-
     
         } catch (err) {
             console.error('Error fetching history:', err.message);
         }
     }
+    
+// Clear history table 
+document.getElementById("clear-history-btn")?.addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to clear all attendance history?")) return;
+  
+    try {
+      const res = await fetch(`/api/attendance/clear-history`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  
+      alert(" All attendance history cleared.");
+      updateHistoryTable(); // reload table after clearing
+    } catch (err) {
+      console.error("Clear history error:", err.message);
+      alert("Failed to clear history. Please try again.");
+    }
+  });
+  
+  document.getElementById("history-search-input")?.addEventListener("input", function () {
+    const filter = this.value.toLowerCase();
+    document.querySelectorAll("#history-table tr").forEach((row, i) => {
+      if (i === 0) return; // skip header row
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(filter) ? "" : "none";
+    });
+  });
+  
+
+    
     
     
 
@@ -446,7 +481,7 @@ document.querySelectorAll(".delete-btn").forEach(btn => {
                 start: startTime,
                 end: endTime
             }).toString();
-            const baseUrl = 'https://c3c84c5a85cd.ngrok-free.app';
+            const baseUrl = 'https://337006a6cf25.ngrok-free.app/';
             const qrUrl = `${baseUrl}/student-portal.html?${qrData}`;
 
             const qrContainer = document.getElementById("qrCodeContainer");

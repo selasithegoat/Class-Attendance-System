@@ -8,6 +8,7 @@
     --main-font-family: "Poppins", sans-serif;
     --shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     --download: #4CAF50;
+    --delete: #e43f15;
 }
 
 *, *::before, *::after {
@@ -244,6 +245,77 @@ nav li svg {
     transform: translate(-50%, 0);
 }
 
+
+/* Wrap search + button in a flex row */
+.history-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 20px 0;
+}
+
+
+/* Wrapper to center search bar */
+.history-search {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+/* Search input styling */
+#history-search-input {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: var(--pri-font-size);
+    font-family: var(--main-font-family);
+    background-color: var(--sec-page-bg-color);
+    color: var(--main-text-color);
+    box-shadow: var(--shadow);
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+/* Focus effect */
+#history-search-input:focus {
+    background-color: var(--2nd-sec-page-bg-color);
+    border: 2px solid var(--accent-color);
+    color: white;
+}
+
+/* Placeholder text */
+#history-search-input::placeholder {
+    color: #ccc;
+    font-style: italic;
+}
+
+/* Clear History Button */
+#clear-history-btn {
+    padding: 10px 18px;
+    font-size: var(--pri-font-size);
+    font-family: var(--main-font-family);
+    border: none;
+    border-radius: 8px;
+    background-color: var(--delete);
+    color: white;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+#clear-history-btn:hover {
+    background-color: var(--delete);
+    transform: translateY(-2px);
+}
+
+#clear-history-btn:active {
+    transform: translateY(0);
+}
+
+
 .download-btn {
     background: #4CAF50 !important;
     border: none;
@@ -297,6 +369,7 @@ nav li svg {
 }
 
 .close-modal svg, .close-ca-modal svg, .close-vaa-modal svg, .close-history-modal svg {
+
     width: 24px;
     height: 24px;
     fill: none;

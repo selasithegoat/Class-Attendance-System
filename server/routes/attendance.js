@@ -220,6 +220,25 @@ router.put('/cancel/:id', async (req, res) => {
   }
 });
 
+
+// CLEAR ALL ATTENDANCE HISTORY - must come BEFORE /:id
+router.delete('/clear-history', async (req, res) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Delete all attendances for this lecturer
+    await Attendance.deleteMany({ lecturerId: decoded.id });
+
+    res.json({ message: 'All attendance history cleared successfully' });
+  } catch (err) {
+    console.error('Error clearing history:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ===================== DOWNLOAD ATTENDANCE =====================
 router.get('/download/:id', async (req, res) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -286,28 +305,32 @@ router.get('/download/:id', async (req, res) => {
 });
 
 
-// DELETE ATTENDANCE
+// DELETE SINGLE ATTENDANCE
 router.delete('/:id', async (req, res) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided' });
 
   try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const deleted = await Attendance.findOneAndDelete({
-          _id: req.params.id,
-          lecturerId: decoded.id,
-          status: 'Cancelled'
-      });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      if (!deleted) {
-          return res.status(404).json({ message: 'Cancelled attendance not found' });
-      }
+    // 🔑 Remove status restriction — delete if lecturer owns it
+    const deleted = await Attendance.findOneAndDelete({
+      _id: req.params.id,
+      lecturerId: decoded.id
+    });
 
-      res.json({ message: 'Attendance deleted successfully' });
+    if (!deleted) {
+      return res.status(404).json({ message: 'Attendance not found' });
+    }
+
+    res.json({ message: 'Attendance deleted successfully' });
   } catch (err) {
-      console.error('Error deleting attendance:', err);
-      res.status(500).json({ message: 'Server error' });
+    console.error('Error deleting attendance:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
+
+
+
 ``
 module.exports = router;

@@ -29,7 +29,18 @@ window.addEventListener("load", () => {
         scanStatus.textContent = "Attendance details loaded.";
         attendanceForm.dataset.qrData = JSON.stringify(qrData);
         displayClassInfo(qrData);
-        // Proximity check now only on server
+
+        // ✅ Local device/session check
+        const sessionKey = `${qrData.class}|${qrData.date}|${qrData.end}`;
+        const used = JSON.parse(localStorage.getItem('usedAttendances') || '[]');
+        if (used.includes(sessionKey)) {
+            attendanceStatus.textContent = "This device has already taken attendance for this session.";
+            const submitBtn = attendanceForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+        } else {
+            const submitBtn = attendanceForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = false;
+        }
     }
 });
 
@@ -76,6 +87,18 @@ function tick() {
                     stopCamera();
                     attendanceForm.dataset.qrData = JSON.stringify(qrData);
                     displayClassInfo(qrData);
+
+                    // ✅ Local device/session check
+                    const sessionKey = `${qrData.class}|${qrData.date}|${qrData.end}`;
+                    const used = JSON.parse(localStorage.getItem('usedAttendances') || '[]');
+                    if (used.includes(sessionKey)) {
+                        attendanceStatus.textContent = "This device has already taken attendance for this session.";
+                        const submitBtn = attendanceForm.querySelector('button[type="submit"]');
+                        if (submitBtn) submitBtn.disabled = true;
+                    } else {
+                        const submitBtn = attendanceForm.querySelector('button[type="submit"]');
+                        if (submitBtn) submitBtn.disabled = false;
+                    }
                 }
             } catch {
                 scanStatus.textContent = "Invalid QR code data.";
@@ -104,6 +127,20 @@ function stopCamera() {
     }
 }
 
+// Generate deviceId once and store in localStorage
+function getDeviceId() {
+    let deviceId = localStorage.getItem('deviceId');
+    if (!deviceId) {
+        if (window.crypto && crypto.randomUUID) {
+            deviceId = crypto.randomUUID();
+        } else {
+            deviceId = 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2,10);
+        }
+        localStorage.setItem('deviceId', deviceId);
+    }
+    return deviceId;
+}
+
 attendanceForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     attendanceStatus.textContent = "Verifying location...";
@@ -113,6 +150,8 @@ attendanceForm.addEventListener("submit", async (event) => {
         const position = await getCurrentPosition();
         const { latitude, longitude } = position.coords;
 
+        const deviceId = getDeviceId();
+        console.log("🔑 deviceId (from localStorage):", deviceId);
         console.log("📍 Student current coords:", latitude, longitude);
 
         const studentName = document.getElementById("student-name").value.trim();
@@ -129,7 +168,8 @@ attendanceForm.addEventListener("submit", async (event) => {
             studentName,
             indexNumber,
             latitude,
-            longitude
+            longitude,
+            deviceId
         });
 
         const response = await fetch('/api/attendance/mark', {
@@ -142,10 +182,11 @@ attendanceForm.addEventListener("submit", async (event) => {
                 studentName,
                 indexNumber,
                 latitude,
-                longitude
+                longitude,
+                deviceId    // ✅ send deviceId
             })
         });
-
+        
         console.log("📥 Server responded with status:", response.status);
 
         const result = await response.json();
@@ -153,6 +194,17 @@ attendanceForm.addEventListener("submit", async (event) => {
 
         if (response.ok) {
             attendanceStatus.textContent = "Attendance taken successfully!";
+
+            // ✅ Save session key locally so this device can't resubmit
+            const sessionKey = `${qrData.class}|${qrData.date}|${qrData.end}`;
+            const used = JSON.parse(localStorage.getItem('usedAttendances') || '[]');
+            if (!used.includes(sessionKey)) {
+                used.push(sessionKey);
+                localStorage.setItem('usedAttendances', JSON.stringify(used));
+            }
+            const submitBtn = attendanceForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+
             successPopup.style.display = "block";
             setTimeout(() => { successPopup.style.display = "none"; }, 3000);
             attendanceForm.reset();

@@ -116,11 +116,12 @@ router.post('/', async (req, res) => {
 });
 
 // ===================== MARK ATTENDANCE =====================
+// ===================== MARK ATTENDANCE =====================
 router.post('/mark', async (req, res) => {
   console.log("🟢 /api/attendance/mark endpoint hit!");
   console.log("📩 Request body:", req.body);
 
-  const { className, date, endTime, studentName, indexNumber, latitude, longitude } = req.body;
+  const { className, date, endTime, studentName, indexNumber, latitude, longitude, deviceId } = req.body;
 
   try {
     const attendance = await Attendance.findOne({ className, date, endTime, status: 'Active' });
@@ -142,7 +143,6 @@ router.post('/mark', async (req, res) => {
       parseFloat(attendance.lecturerLng)
     );
     
-
     console.log("📏 Distance (student → lecturer):", distance, "meters");
     console.log("---------------------------");
 
@@ -156,24 +156,29 @@ router.post('/mark', async (req, res) => {
       return res.status(403).json({ message: `You are not within the class vicinity. Distance: ${distance.toFixed(2)}m` });
     }
 
-    // ✅ Prevent duplicate attendance
+    // ✅ Prevent duplicate attendance (same index number OR same device)
     const alreadyMarked = attendance.students.some(stu => {
-      try { return decrypt(stu.indexNumber) === indexNumber; } catch { return false; }
+      try {
+        return decrypt(stu.indexNumber) === indexNumber || stu.deviceId === deviceId;
+      } catch {
+        return false;
+      }
     });
     if (alreadyMarked) {
-      console.warn(`⚠️ Student ${indexNumber} already marked attendance.`);
-      return res.status(400).json({ message: 'Student has already marked attendance' });
+      console.warn(`⚠️ Duplicate attempt detected (student: ${indexNumber}, device: ${deviceId}).`);
+      return res.status(400).json({ message: 'This device or student has already marked attendance for this session' });
     }
 
     attendance.students.push({
       studentName: encrypt(studentName),
       indexNumber: encrypt(indexNumber),
       timestamp: new Date().toISOString(),
-      location: { latitude, longitude }
+      location: { latitude, longitude },
+      deviceId   // ✅ save deviceId for duplicate protection
     });
     await attendance.save();
 
-    console.log(`✅ Attendance marked for student ${studentName} (${indexNumber})`);
+    console.log(`✅ Attendance marked for student ${studentName} (${indexNumber}) on device ${deviceId}`);
 
     res.json({ message: 'Attendance marked successfully' });
   } catch (err) {
@@ -181,6 +186,7 @@ router.post('/mark', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 
 
@@ -297,8 +303,26 @@ router.get('/download/:id', async (req, res) => {
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Attendance');
+
+    // ✅ Heading rows
+    ws.mergeCells('A1:D1');
+    ws.getCell('A1').value = `Lecturer: ${attendance.lecturerId?.name || 'Unknown Lecturer'}`;
+    ws.getCell('A1').font = { bold: true, size: 14 };
+
+    ws.mergeCells('A2:D2');
+    ws.getCell('A2').value = `Class: ${attendance.className}`;
+    ws.getCell('A2').font = { bold: true, size: 12 };
+
+    ws.mergeCells('A3:D3');
+    ws.getCell('A3').value = `Course: ${attendance.courseName}`;
+    ws.getCell('A3').font = { bold: true, size: 12 };
+
+    ws.addRow([]); // empty row for spacing
+
+    // ✅ Table header
     ws.addRow(['Student Name', 'Index Number', 'Time Taken', 'Date']).font = { bold: true };
 
+    // ✅ Student rows
     students.forEach(s => {
       const dateObj = s.timestamp ? new Date(s.timestamp) : null;
       ws.addRow([
@@ -318,6 +342,7 @@ router.get('/download/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // ===================== DELETE =====================
 router.delete('/:id', async (req, res) => {

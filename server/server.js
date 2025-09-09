@@ -4,7 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const authRoutes = require('./routes/auth');
-const attendanceRoutes = require('./routes/attendance');
+const attendanceRoutes = require('./routes/attendance'); // your routes/attendance.js file
 const cron = require('node-cron');
 const Attendance = require('./models/Attendance');
 const fs = require('fs'); // For file existence check
@@ -51,7 +51,9 @@ app.use('/api/auth', (req, res, next) => {
     next();
 }, authRoutes);
 
+// ✅ Changed from singular to plural
 app.use('/api/attendance', attendanceRoutes);
+
 app.use('/api/auth', authRoutes);
 
 // Debug route
@@ -73,8 +75,6 @@ app.get('*', (req, res) => {
 // Connect to MongoDB
 const connectDB = require('./config/db');
 connectDB();
-
-
 
 // Cron job to update expired sessions every minute
 cron.schedule('* * * * *', async () => {

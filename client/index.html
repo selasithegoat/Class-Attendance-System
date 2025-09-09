@@ -95,12 +95,8 @@
                         <div class="history-search">
                           <input type="text" id="history-search-input" placeholder="Search by Class or Date...">
                         </div>
-                        <button id="clear-history-btn" class="icon-btn icon-delete"
-                        >Clear All History</button>
+                        <button id="clear-history-btn" class="icon-btn icon-delete">Clear All History</button>
                     </div>
-                      
-                      
-                      
                     <table id="history-table">
                         <tr>
                             <th>Class</th>
@@ -173,16 +169,16 @@
         </div>
     </section>
     <script>
-        // Fetch lecturer name from localStorage
+        // Fetch lecturer name from localStorage (fallback only)
         document.addEventListener('DOMContentLoaded', () => {
             const lecturerId = localStorage.getItem('loggedInLecturerId');
-            const lecturerData = JSON.parse(localStorage.getItem('lecturers') || '{}');
-            if (lecturerId && lecturerData[lecturerId]) {
-                document.getElementById('lecturer-name').textContent = `Welcome, ${lecturerData[lecturers].name}`;
+            const lecturers = JSON.parse(localStorage.getItem('lecturers') || '{}');
+            if (lecturerId && lecturers[lecturerId]) {
+                document.getElementById('lecturer-name').textContent = `Welcome, ${lecturers[lecturerId].name}`;
             } else {
                 document.getElementById('lecturer-name').textContent = 'Welcome, Unknown';
             }
         });
-    </script>
+    </script>
 </body>
 </html>

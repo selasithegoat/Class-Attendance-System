@@ -8,13 +8,7 @@ const attendanceForm = document.getElementById("attendance-form");
 const attendanceStatus = document.getElementById("attendance-status");
 const classInfo = document.getElementById("class-info");
 const cancelBtn = document.getElementById("cancel-btn");
-const successPopup = document.getElementById("success-popup"); // New reference to the pop-up
-
-const SCHOOL_LOCATION = {
-    latitude: 5.6037,
-    longitude: -0.1870,
-    radius: 10000
-};
+const successPopup = document.getElementById("success-popup");
 
 let stream = null;
 
@@ -26,6 +20,7 @@ window.addEventListener("load", () => {
         date: urlParams.get("date"),
         start: urlParams.get("start"),
         end: urlParams.get("end")
+        // 🚫 removed lecturerLat/lng from QR
     };
 
     if (qrData.class && qrData.course && qrData.date && qrData.start && qrData.end) {
@@ -34,10 +29,11 @@ window.addEventListener("load", () => {
         scanStatus.textContent = "Attendance details loaded.";
         attendanceForm.dataset.qrData = JSON.stringify(qrData);
         displayClassInfo(qrData);
-        checkAttendanceStatus(qrData); // Check if attendance was already marked
+        // Proximity check now only on server
     }
 });
 
+// QR Scanning
 startScannerBtn.addEventListener("click", async () => {
     try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -59,9 +55,7 @@ function tick() {
         canvas.width = video.videoWidth;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "dontInvert",
-        });
+        const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
 
         if (code) {
             try {
@@ -72,8 +66,9 @@ function tick() {
                     date: url.searchParams.get("date"),
                     start: url.searchParams.get("start"),
                     end: url.searchParams.get("end")
+                    // 🚫 removed lecturerLat/lng
                 };
-                if (qrData.class && qrData.course && qrData.date && qrData.start && qrData.end) {
+                if (qrData.class) {
                     scanStatus.textContent = "QR code scanned successfully!";
                     video.style.display = "none";
                     canvas.style.display = "none";
@@ -81,11 +76,8 @@ function tick() {
                     stopCamera();
                     attendanceForm.dataset.qrData = JSON.stringify(qrData);
                     displayClassInfo(qrData);
-                    checkAttendanceStatus(qrData); // Check if attendance was already marked
-                } else {
-                    scanStatus.textContent = "Invalid QR code data.";
                 }
-            } catch (err) {
+            } catch {
                 scanStatus.textContent = "Invalid QR code data.";
             }
         } else {
@@ -112,81 +104,33 @@ function stopCamera() {
     }
 }
 
-function checkAttendanceStatus(qrData) {
-    const sessionKey = `attendance_${qrData.class}_${qrData.date}_${qrData.end}`;
-    const attendanceMarked = localStorage.getItem(sessionKey);
-    const classEndTime = new Date(`${qrData.date}T${qrData.end}`);
-    const currentTime = new Date();
-
-    if (attendanceMarked && currentTime <= classEndTime) {
-        attendanceStatus.textContent = "Attendance already marked for this session.";
-        attendanceForm.style.display = "none"; // Hide the form to prevent resubmission
-        cancelBtn.style.display = "block"; // Ensure cancel button is visible
-    } else if (currentTime > classEndTime) {
-        // Clear the attendance mark if the class has ended
-        localStorage.removeItem(sessionKey);
-        attendanceForm.style.display = "block";
-        attendanceStatus.textContent = "";
-    } else {
-        attendanceForm.style.display = "block";
-        attendanceStatus.textContent = "";
-    }
-}
-
-cancelBtn.addEventListener("click", () => {
-    attendanceContainer.style.display = "none";
-    startScannerBtn.style.display = "block";
-    scanStatus.textContent = "Tap to start scanning";
-    attendanceForm.reset();
-    stopCamera();
-    attendanceForm.style.display = "block"; // Reset form visibility
-    attendanceStatus.textContent = "";
-});
-
 attendanceForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     attendanceStatus.textContent = "Verifying location...";
 
     try {
         const qrData = JSON.parse(attendanceForm.dataset.qrData);
-        const sessionKey = `attendance_${qrData.class}_${qrData.date}_${qrData.end}`;
-        const attendanceMarked = localStorage.getItem(sessionKey);
-        const classStartTime = new Date(`${qrData.date}T${qrData.start}`);
-        const classEndTime = new Date(`${qrData.date}T${qrData.end}`);
-        const currentTime = new Date();
-
-        if (attendanceMarked && currentTime <= classEndTime) {
-            attendanceStatus.textContent = "Attendance already marked for this session.";
-            return;
-        }
-
-        if (currentTime > classEndTime) {
-            attendanceStatus.textContent = "Cannot mark attendance: Class has already ended.";
-            localStorage.removeItem(sessionKey); // Clear any outdated attendance mark
-            return;
-        }
-
-        if (currentTime < classStartTime) {
-            attendanceStatus.textContent = "Cannot mark attendance: Class has not yet started.";
-            return;
-        }
-
         const position = await getCurrentPosition();
         const { latitude, longitude } = position.coords;
-        const isWithinSchool = checkSchoolLocation(latitude, longitude);
 
-        if (!isWithinSchool) {
-            attendanceStatus.textContent = "Cannot mark attendance: You are not within the school premises.";
-            return;
-        }
+        console.log("📍 Student current coords:", latitude, longitude);
 
         const studentName = document.getElementById("student-name").value.trim();
         const indexNumber = document.getElementById("index-number").value.trim();
-
         if (!studentName || !indexNumber) {
             attendanceStatus.textContent = "Please fill in all fields.";
             return;
         }
+
+        console.log("📤 Sending attendance mark request:", {
+            className: qrData.class,
+            date: qrData.date,
+            endTime: qrData.end,
+            studentName,
+            indexNumber,
+            latitude,
+            longitude
+        });
 
         const response = await fetch('/api/attendance/mark', {
             method: 'POST',
@@ -202,24 +146,23 @@ attendanceForm.addEventListener("submit", async (event) => {
             })
         });
 
+        console.log("📥 Server responded with status:", response.status);
+
         const result = await response.json();
+        console.log("📥 Server response body:", result);
+
         if (response.ok) {
-            localStorage.setItem(sessionKey, 'marked'); // Mark attendance in localStorage
             attendanceStatus.textContent = "Attendance taken successfully!";
-            // Show the green pop-up
             successPopup.style.display = "block";
-            setTimeout(() => {
-                successPopup.style.display = "none";
-            }, 3000); // Hide after 3 seconds
+            setTimeout(() => { successPopup.style.display = "none"; }, 3000);
             attendanceForm.reset();
             attendanceContainer.style.display = "none";
             startScannerBtn.style.display = "block";
-            scanStatus.textContent = "Tap to start scanning";
-            attendanceForm.style.display = "block"; // Reset form visibility
         } else {
             attendanceStatus.textContent = result.message;
         }
     } catch (err) {
+        console.error("❌ Error during attendance submit:", err);
         attendanceStatus.textContent = "Error: " + err.message;
     }
 });
@@ -232,20 +175,4 @@ function getCurrentPosition() {
             maximumAge: 0
         });
     });
-}
-
-function checkSchoolLocation(lat, lon) {
-    const R = 6371e3;
-    const φ1 = SCHOOL_LOCATION.latitude * Math.PI / 180;
-    const φ2 = lat * Math.PI / 180;
-    const Δφ = (lat - SCHOOL_LOCATION.latitude) * Math.PI / 180;
-    const Δλ = (lon - SCHOOL_LOCATION.longitude) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-
-    return distance <= SCHOOL_LOCATION.radius;
 }

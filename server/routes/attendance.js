@@ -2,28 +2,43 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const Attendance = require('../models/Attendance');
-const Lecturer = require('../models/Lecturer'); // Make sure this path is correct
 const ExcelJS = require('exceljs');
 const router = express.Router();
 
+// ===================== UTILITY =====================
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371e3; // meters
+  const toRad = (x) => x * Math.PI / 180;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// ===================== ENCRYPTION HELPERS =====================
 const algorithm = 'aes-256-ctr';
 const encryptionKeyHex = process.env.ENCRYPTION_KEY || null;
 
-// Try to build a Buffer from ENCRYPTION_KEY if provided and valid hex
 let encryptionKeyBuffer = null;
 if (encryptionKeyHex) {
   try {
     encryptionKeyBuffer = Buffer.from(encryptionKeyHex, 'hex');
     if (encryptionKeyBuffer.length !== 32) {
-      console.warn('ENCRYPTION_KEY should be 32 bytes (64 hex chars). Current key length:', encryptionKeyBuffer.length);
+      console.warn('ENCRYPTION_KEY should be 32 bytes. Current:', encryptionKeyBuffer.length);
       encryptionKeyBuffer = null;
     }
-  } catch (err) {
-    console.warn('Invalid ENCRYPTION_KEY provided (not valid hex). Falling back to non-AES mode.', err.message);
+  } catch {
+    console.warn('Invalid ENCRYPTION_KEY provided.');
     encryptionKeyBuffer = null;
   }
 } else {
-  console.warn('ENCRYPTION_KEY not set. Falling back to base64 encoding (not secure). Set ENCRYPTION_KEY to enable AES encryption.');
+  console.warn('ENCRYPTION_KEY not set. Falling back to base64.');
 }
 
 function encrypt(text) {
@@ -45,42 +60,40 @@ function decrypt(text) {
   if (text.startsWith('b64:')) {
     try {
       return Buffer.from(text.slice(4), 'base64').toString('utf8');
-    } catch (err) {
-      console.warn('Failed to base64-decode value:', err.message);
+    } catch {
       return null;
     }
   }
   const parts = text.split(':');
   if (parts.length !== 2) return text;
-  const [ivString, encryptedString] = parts;
-  if (!/^[0-9a-fA-F]+$/.test(ivString) || !/^[0-9a-fA-F]+$/.test(encryptedString)) return text;
-  if (!encryptionKeyBuffer) {
-    console.warn('ENCRYPTION_KEY missing — cannot decrypt AES value. Returning null.');
-    return null;
-  }
+  if (!encryptionKeyBuffer) return null;
   try {
-    const iv = Buffer.from(ivString, 'hex');
-    const encryptedText = Buffer.from(encryptedString, 'hex');
+    const iv = Buffer.from(parts[0], 'hex');
+    const encryptedText = Buffer.from(parts[1], 'hex');
     const decipher = crypto.createDecipheriv(algorithm, encryptionKeyBuffer, iv);
     let decrypted = decipher.update(encryptedText);
     decrypted = Buffer.concat([decrypted, decipher.final()]);
     return decrypted.toString('utf8');
-  } catch (err) {
-    console.error('Error during decrypt:', err.message);
+  } catch {
     return null;
   }
 }
 
-// ===================== CREATE ATTENDANCE SESSION =====================
+
+
+// ===================== CREATE ATTENDANCE =====================
 router.post('/', async (req, res) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided' });
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const { className, courseName, date, startTime, endTime } = req.body;
-    if (!className || !courseName || !date || !startTime || !endTime) {
-      return res.status(400).json({ message: 'All fields are required' });
+    const { className, courseName, date, startTime, endTime, lecturerLat, lecturerLng } = req.body;
+
+    if (!className || !courseName || !date || !startTime || !endTime || !lecturerLat || !lecturerLng) {
+      return res.status(400).json({ message: 'All fields including lecturer location are required' });
     }
+
     const attendance = new Attendance({
       lecturerId: decoded.id,
       className,
@@ -88,11 +101,14 @@ router.post('/', async (req, res) => {
       date,
       startTime,
       endTime,
+      lecturerLat,
+      lecturerLng,
       status: 'Active',
       students: []
     });
+
     await attendance.save();
-    res.status(201).json({ message: 'Attendance created successfully', attendance });
+    res.status(201).json(attendance);
   } catch (err) {
     console.error('Error creating attendance:', err);
     res.status(500).json({ message: 'Server error' });
@@ -101,30 +117,54 @@ router.post('/', async (req, res) => {
 
 // ===================== MARK ATTENDANCE =====================
 router.post('/mark', async (req, res) => {
+  console.log("🟢 /api/attendance/mark endpoint hit!");
+  console.log("📩 Request body:", req.body);
+
   const { className, date, endTime, studentName, indexNumber, latitude, longitude } = req.body;
-  if (!studentName || !indexNumber) {
-    return res.status(400).json({ message: 'Student name and index number are required' });
-  }
+
   try {
-    const attendance = await Attendance.findOne({
-      className,
-      date,
-      endTime,
-      status: 'Active'
-    });
+    const attendance = await Attendance.findOne({ className, date, endTime, status: 'Active' });
     if (!attendance) {
+      console.warn("⚠️ No active attendance found for:", { className, date, endTime });
       return res.status(404).json({ message: 'Attendance session not found or not active' });
     }
+
+    // 🔎 Debug logging
+    console.log("---- ATTENDANCE DEBUG ----");
+    console.log("📄 Attendance document from DB:", JSON.stringify(attendance, null, 2));
+    console.log("📍 Student Location (from request):", latitude, longitude);
+    console.log("📍 Lecturer Location (from DB):", attendance.lecturerLat, attendance.lecturerLng);
+
+    const distance = calculateDistance(
+      parseFloat(latitude),
+      parseFloat(longitude),
+      parseFloat(attendance.lecturerLat),
+      parseFloat(attendance.lecturerLng)
+    );
+    
+
+    console.log("📏 Distance (student → lecturer):", distance, "meters");
+    console.log("---------------------------");
+
+    if (isNaN(distance)) {
+      console.error("❌ Invalid coordinates detected.");
+      return res.status(500).json({ message: 'Error: Invalid coordinates detected' });
+    }
+
+    if (distance > 10000) {  // ✅ threshold = 10 km
+      console.warn(`❌ Student too far away: ${distance.toFixed(2)}m`);
+      return res.status(403).json({ message: `You are not within the class vicinity. Distance: ${distance.toFixed(2)}m` });
+    }
+
+    // ✅ Prevent duplicate attendance
     const alreadyMarked = attendance.students.some(stu => {
-      try {
-        return decrypt(stu.indexNumber) === indexNumber;
-      } catch {
-        return false;
-      }
+      try { return decrypt(stu.indexNumber) === indexNumber; } catch { return false; }
     });
     if (alreadyMarked) {
+      console.warn(`⚠️ Student ${indexNumber} already marked attendance.`);
       return res.status(400).json({ message: 'Student has already marked attendance' });
     }
+
     attendance.students.push({
       studentName: encrypt(studentName),
       indexNumber: encrypt(indexNumber),
@@ -132,9 +172,42 @@ router.post('/mark', async (req, res) => {
       location: { latitude, longitude }
     });
     await attendance.save();
+
+    console.log(`✅ Attendance marked for student ${studentName} (${indexNumber})`);
+
     res.json({ message: 'Attendance marked successfully' });
   } catch (err) {
-    console.error('Error marking attendance:', err);
+    console.error('🔥 Error marking attendance:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
+// ===================== ACTIVE =====================
+router.get('/active', async (req, res) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let attendances = await Attendance.find({
+      lecturerId: decoded.id,
+      status: 'Active'
+    });
+
+    attendances = attendances.map(att => ({
+      ...att._doc,
+      students: att.students.map(stu => ({
+        ...stu._doc,
+        studentName: decrypt(stu.studentName),
+        indexNumber: decrypt(stu.indexNumber)
+      }))
+    }));
+
+    res.json(attendances);
+  } catch (err) {
+    console.error('Error fetching active attendances:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -143,22 +216,20 @@ router.post('/mark', async (req, res) => {
 router.get('/history', async (req, res) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided' });
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    let attendances = await Attendance.find({
-      lecturerId: decoded.id,
-      status: { $in: ['Completed', 'Cancelled'] }
-    }).populate('lecturerId', 'name');
-    attendances = attendances.map(att => {
-      att.students = att.students
-        .filter(stu => stu.studentName && stu.indexNumber)
-        .map(stu => ({
-          ...stu._doc,
-          studentName: decrypt(stu.studentName),
-          indexNumber: decrypt(stu.indexNumber)
-        }));
-      return att;
-    });
+    let attendances = await Attendance.find({ lecturerId: decoded.id });
+
+    attendances = attendances.map(att => ({
+      ...att._doc,
+      students: att.students.map(stu => ({
+        ...stu._doc,
+        studentName: decrypt(stu.studentName),
+        indexNumber: decrypt(stu.indexNumber)
+      }))
+    }));
+
     res.json(attendances);
   } catch (err) {
     console.error('Error fetching history:', err);
@@ -166,20 +237,123 @@ router.get('/history', async (req, res) => {
   }
 });
 
-// ===================== ACTIVE =====================
-router.get('/active', async (req, res) => {
+// ===================== CANCEL =====================
+router.put('/cancel/:id', async (req, res) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided' });
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const now = new Date();
+    const attendance = await Attendance.findOne({
+      _id: req.params.id,
+      lecturerId: decoded.id,
+      status: 'Active'
+    });
+    if (!attendance) return res.status(404).json({ message: 'Not found or inactive' });
+
+    attendance.status = 'Cancelled';
+    await attendance.save();
+    res.json({ message: 'Cancelled' });
+  } catch (err) {
+    console.error('Error cancelling attendance:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ===================== CLEAR HISTORY =====================
+router.delete('/clear-history', async (req, res) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    await Attendance.deleteMany({ lecturerId: decoded.id });
+    res.json({ message: 'History cleared' });
+  } catch (err) {
+    console.error('Error clearing history:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ===================== DOWNLOAD =====================
+router.get('/download/:id', async (req, res) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const attendance = await Attendance.findOne({
+      _id: req.params.id,
+      lecturerId: decoded.id
+    }).populate('lecturerId', 'name');
+
+    if (!attendance) return res.status(404).json({ message: 'Not found' });
+
+    const students = attendance.students.map(stu => ({
+      name: decrypt(stu.studentName),
+      indexNumber: decrypt(stu.indexNumber),
+      timestamp: stu.timestamp
+    }));
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Attendance');
+    ws.addRow(['Student Name', 'Index Number', 'Time Taken', 'Date']).font = { bold: true };
+
+    students.forEach(s => {
+      const dateObj = s.timestamp ? new Date(s.timestamp) : null;
+      ws.addRow([
+        s.name,
+        s.indexNumber,
+        dateObj ? dateObj.toLocaleTimeString() : '',
+        dateObj ? dateObj.toLocaleDateString() : ''
+      ]);
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Attendance_${attendance.className}_${attendance.courseName}.xlsx`);
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Error downloading:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ===================== DELETE =====================
+router.delete('/:id', async (req, res) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const deleted = await Attendance.findOneAndDelete({
+      _id: req.params.id,
+      lecturerId: decoded.id
+    });
+    if (!deleted) return res.status(404).json({ message: 'Not found' });
+
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    console.error('Error deleting:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+// ===================== ATTENDANCE HISTORY =====================
+router.get('/history', async (req, res) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     let attendances = await Attendance.find({
       lecturerId: decoded.id,
-      status: 'Active',
-      $expr: {
-        $gt: [{ $concat: ['$date', 'T', '$endTime', ':00Z'] }, now.toISOString()]
-      }
-    });
+      status: { $in: ['Completed', 'Cancelled'] }
+    }).sort({ date: -1 });
+
+    // Decrypt student info
     attendances = attendances.map(att => {
       att.students = att.students
         .filter(stu => stu.studentName && stu.indexNumber)
@@ -190,147 +364,12 @@ router.get('/active', async (req, res) => {
         }));
       return att;
     });
+
     res.json(attendances);
   } catch (err) {
-    console.error('Error fetching active attendances:', err);
+    console.error('Error fetching attendance history:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// ===================== CANCEL ATTENDANCE =====================
-router.put('/cancel/:id', async (req, res) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ message: 'No token provided' });
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const attendance = await Attendance.findOne({
-      _id: req.params.id,
-      lecturerId: decoded.id,
-      status: 'Active'
-    });
-    if (!attendance) {
-      return res.status(404).json({ message: 'Attendance not found or not active' });
-    }
-    attendance.status = 'Cancelled';
-    await attendance.save();
-    res.json({ message: 'Attendance cancelled successfully' });
-  } catch (err) {
-    console.error('Error cancelling attendance:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-// CLEAR ALL ATTENDANCE HISTORY - must come BEFORE /:id
-router.delete('/clear-history', async (req, res) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ message: 'No token provided' });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Delete all attendances for this lecturer
-    await Attendance.deleteMany({ lecturerId: decoded.id });
-
-    res.json({ message: 'All attendance history cleared successfully' });
-  } catch (err) {
-    console.error('Error clearing history:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// ===================== DOWNLOAD ATTENDANCE =====================
-router.get('/download/:id', async (req, res) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ message: 'No token provided' });
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const attendance = await Attendance.findOne({
-      _id: req.params.id,
-      lecturerId: decoded.id
-    }).populate('lecturerId', 'name');
-
-    if (!attendance) {
-      return res.status(404).json({ message: 'Attendance not found' });
-    }
-
-    // Decrypt student details
-    const students = attendance.students.map(stu => ({
-      name: decrypt(stu.studentName),
-      indexNumber: decrypt(stu.indexNumber),
-      timestamp: stu.timestamp
-    }));
-
-    // Create Excel file
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Attendance');
-
-    // Heading
-    ws.mergeCells('A1:D1');
-    ws.getCell('A1').value = `Lecturer: ${attendance.lecturerId?.name || 'Unknown'}`;
-    ws.getCell('A1').font = { bold: true, size: 14 };
-    ws.getCell('A1').alignment = { horizontal: 'center' };
-
-    ws.mergeCells('A2:D2');
-    ws.getCell('A2').value = `Class: ${attendance.className}`;
-    ws.getCell('A2').alignment = { horizontal: 'center' };
-
-    ws.mergeCells('A3:D3');
-    ws.getCell('A3').value = `Course: ${attendance.courseName}`;
-    ws.getCell('A3').alignment = { horizontal: 'center' };
-
-
-    // Table headers
-    ws.addRow(['Student Name', 'Index Number', 'Time Taken', 'Date']);
-    ws.getRow(5).font = { bold: true };
-
-    // Add student data
-    students.forEach(s => {
-      const dateObj = s.timestamp ? new Date(s.timestamp) : null;
-      const timeTaken = dateObj ? dateObj.toLocaleTimeString() : '';
-      const dateTaken = dateObj ? dateObj.toLocaleDateString() : '';
-      ws.addRow([s.name, s.indexNumber, timeTaken, dateTaken]);
-    });
-
-    // Send file
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=Attendance_${attendance.className}_${attendance.courseName}.xlsx`);
-    await wb.xlsx.write(res);
-    res.end();
-  } catch (err) {
-    console.error('Error downloading attendance:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-// DELETE SINGLE ATTENDANCE
-router.delete('/:id', async (req, res) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ message: 'No token provided' });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // 🔑 Remove status restriction — delete if lecturer owns it
-    const deleted = await Attendance.findOneAndDelete({
-      _id: req.params.id,
-      lecturerId: decoded.id
-    });
-
-    if (!deleted) {
-      return res.status(404).json({ message: 'Attendance not found' });
-    }
-
-    res.json({ message: 'Attendance deleted successfully' });
-  } catch (err) {
-    console.error('Error deleting attendance:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-
-
-``
 module.exports = router;

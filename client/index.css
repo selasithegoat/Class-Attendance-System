@@ -290,6 +290,7 @@ nav li svg {
 #history-search-input::placeholder {
     color: #ccc;
     font-style: italic;
+    font-size: 12px;
 }
 
 /* Clear History Button */

@@ -151,9 +151,9 @@ router.post('/mark', async (req, res) => {
       return res.status(500).json({ message: 'Error: Invalid coordinates detected' });
     }
 
-    if (distance > 10000) {  // ✅ threshold = 10 km
+    if (distance > 10000) {
       console.warn(`❌ Student too far away: ${distance.toFixed(2)}m`);
-      return res.status(403).json({ message: `You are not within the class vicinity. Distance: ${distance.toFixed(2)}m` });
+      return res.status(403).json({ message: `You are not within the class vicinity.` });
     }
 
     // ✅ Prevent duplicate attendance (same index number OR same device)

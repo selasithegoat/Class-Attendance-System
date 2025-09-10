@@ -277,8 +277,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td>${attendance.status}</td>
                     <td>
                         ${attendance.status === 'Completed'
-                            ? `<button class="download-btn" data-id="${attendance._id}">⬇️</button>` : ''}
-                        <button class="delete-btn" data-id="${attendance._id}">🗑️</button>
+                            ? `<button class="download-btn" data-id="${attendance._id}"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 20 20" fill="#ffffff"><path fill="#ffffff" fill-rule="evenodd" d="M3 17a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1Zm3.293-7.707a1 1 0 0 1 1.414 0L9 10.586V3a1 1 0 1 1 2 0v7.586l1.293-1.293a1 1 0 1 1 1.414 1.414l-3 3a1 1 0 0 1-1.414 0l-3-3a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"/></svg></button>` : ''}
+                        <button class="delete-btn" data-id="${attendance._id}"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="#ffffff"><path fill="#ffffff" d="M7 21q-.825 0-1.413-.588T5 19V6q-.425 0-.713-.288T4 5q0-.425.288-.713T5 4h4q0-.425.288-.713T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5q0 .425-.288.713T19 6v13q0 .825-.588 1.413T17 21H7ZM17 6H7v13h10V6ZM9 17h2V8H9v9Zm4 0h2V8h-2v9ZM7 6v13V6Z"/></svg></button>
                     </td>
                 `;
                 tableBody.appendChild(row);

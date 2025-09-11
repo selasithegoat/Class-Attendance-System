@@ -53,7 +53,6 @@ router.post('/admin/register', async (req, res) => {
       return res.status(400).json({ message: 'Username already exists' });
     }
 
-    // ❌ Don't hash here — schema will hash automatically
     const admin = new Admin({ username, password });
     await admin.save();
 
@@ -64,15 +63,12 @@ router.post('/admin/register', async (req, res) => {
   }
 });
 
-  
-
 // ===================== ADMIN LOGIN =====================
 router.post('/admin/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
     console.log("🟢 Login body received:", req.body);
-
 
     const admin = await Admin.findOne({ username });
     if (!admin) {
@@ -134,7 +130,6 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Lecturer ID already exists' });
     }
 
-    // ❌ Don’t hash here, schema will hash automatically
     const newLecturer = new Lecturer({ lecturerId, name, password });
     await newLecturer.save();
 
@@ -144,8 +139,6 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
-
 
 // ===================== LECTURER LOGIN =====================
 router.post('/login', async (req, res) => {
@@ -222,15 +215,28 @@ router.put('/lecturers/:id', verifyAdmin, async (req, res) => {
 
     if (lecturerId) lecturer.lecturerId = lecturerId;
     if (name) lecturer.name = name;
-    if (password) {
-      const salt = await bcrypt.genSalt(10);
-      lecturer.password = await bcrypt.hash(password, salt);
-    }
+    if (password) lecturer.password = password; // Schema will handle hashing
 
     lecturer.lastUpdated = new Date();
     await lecturer.save();
     res.json({ message: 'Lecturer updated successfully' });
   } catch (err) {
+    console.error('Error updating lecturer:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ===================== Delete Lecturer =====================
+router.delete('/lecturers/:id', verifyAdmin, async (req, res) => {
+  try {
+    const lecturer = await Lecturer.findById(req.params.id);
+    if (!lecturer) {
+      return res.status(404).json({ message: 'Lecturer not found' });
+    }
+    await Lecturer.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Lecturer deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting lecturer:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

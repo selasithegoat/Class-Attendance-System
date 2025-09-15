@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         start: startTime,
                         end: endTime
                     }).toString();
-                    const baseUrl = "https://21b216fc9b5e.ngrok-free.app";
+                    const baseUrl = "https://829ee2b9c07f.ngrok-free.app";
                     const qrUrl = `${baseUrl}/student-portal.html?${qrData}`;
 
                     if (!qrContainer) return;
@@ -441,6 +441,73 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, { enableHighAccuracy: true });
         });
     }
+
+    function getQrWithPadding(padding = 40) {
+        const canvas = qrContainer.querySelector("canvas");
+        if (!canvas) return null;
+    
+        // Create a new canvas bigger than QR
+        const newCanvas = document.createElement("canvas");
+        newCanvas.width = canvas.width + padding * 2;
+        newCanvas.height = canvas.height + padding * 2;
+    
+        const ctx = newCanvas.getContext("2d");
+        // Fill background white
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+        // Draw QR in center with padding
+        ctx.drawImage(canvas, padding, padding);
+    
+        return newCanvas;
+    }
+    
+    // ---------------- QR Code Share ----------------
+    if (shareBtn) {
+        shareBtn.addEventListener("click", async () => {
+            const newCanvas = getQrWithPadding(10); // 40px padding
+            if (!newCanvas) {
+                alert("QR code not generated yet.");
+                return;
+            }
+    
+            newCanvas.toBlob(async (blob) => {
+                if (!blob) return;
+    
+                if (navigator.share && navigator.canShare?.({ files: [new File([blob], "attendance-qr.png", { type: "image/png" })] })) {
+                    try {
+                        const file = new File([blob], "attendance-qr.png", { type: "image/png" });
+                        await navigator.share({
+                            title: "Attendance QR Code",
+                            text: "Scan this QR code to mark attendance.",
+                            files: [file]
+                        });
+                    } catch (err) {
+                        console.error("Share failed:", err);
+                        alert("Unable to share QR code.");
+                    }
+                } else {
+                    alert("Sharing not supported on this device/browser.");
+                }
+            });
+        });
+    }
+    
+    // ---------------- QR Code Save ----------------
+    if (saveBtn) {
+        saveBtn.addEventListener("click", () => {
+            const newCanvas = getQrWithPadding(10); // 40px padding
+            if (!newCanvas) {
+                alert("QR code not generated yet.");
+                return;
+            }
+    
+            const link = document.createElement("a");
+            link.href = newCanvas.toDataURL("image/png");
+            link.download = "attendance-qr.png";
+            link.click();
+        });
+    }
+    
 
     // ---------------- Close modals ----------------
     document.addEventListener('click', (event) => {

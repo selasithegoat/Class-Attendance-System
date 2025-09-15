@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         start: startTime,
                         end: endTime
                     }).toString();
-                    const baseUrl = "https://a8cc09a29dcb.ngrok-free.app";
+                    const baseUrl = "https://21b216fc9b5e.ngrok-free.app";
                     const qrUrl = `${baseUrl}/student-portal.html?${qrData}`;
 
                     if (!qrContainer) return;

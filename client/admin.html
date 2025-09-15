@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Portal</title>
@@ -103,8 +102,10 @@
             pointer-events: none;
             transition: all 0.3s ease;
         }
-        .input-group input:focus + label,
-        .input-group input:valid + label {
+        /* ✅ floating label fix */
+        .input-group input:focus ~ label,
+        .input-group input:valid ~ label,
+        .input-group input.filled ~ label {
             top: -10px;
             left: 10px;
             font-size: 12px;
@@ -112,6 +113,48 @@
             background: var(--sec-page-bg-color);
             padding: 0 4px;
         }
+
+        /* Added styles for toggles & strength UI */
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 14px;
+            color: #ccc;
+            user-select: none;
+        }
+        .strength-bar {
+            height: 6px;
+            border-radius: 4px;
+            margin-top: -10px;
+            margin-bottom: 10px;
+            background: #444;
+            overflow: hidden;
+        }
+        .strength-bar span {
+            display: block;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .strength-weak { background: #e63946; }
+        .strength-medium { background: #f1c40f; }
+        .strength-strong { background: #2ecc71; }
+        .strength-label {
+            font-size: 12px;
+            margin-top: -6px;
+            margin-bottom: 10px;
+            color: #ccc;
+        }
+        small.password-rules {
+            display: block;
+            margin-bottom: 8px;
+            color: #bdbdbd;
+            font-size: 12px;
+        }
+
         form button[type="submit"] {
             width: 100%;
             padding: 1rem;
@@ -288,9 +331,16 @@
             color: rgba(255, 255, 255, 0.6);
             font-size: 0.875rem;
         }
+
+        /* disabled look for buttons */
+        button[disabled] {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
-</head>
-<body>
+
+
+
     <div class="admin-container">
         <header>
             <span id="admin-name"></span>
@@ -311,6 +361,7 @@
                     </div>
                     <div class="input-group">
                         <input id="login-password" type="password" required>
+                        <span class="toggle-password" data-target="login-password">👁</span>
                         <label>Password</label>
                     </div>
                     <button type="submit">Login</button>
@@ -324,15 +375,20 @@
                         <label>Username</label>
                     </div>
                     <div class="input-group">
-                        <input id="register-password" type="password" required>
-                        <label>Password</label>
-                    </div>
-                    <div class="input-container">
-                        <input type="password" id="register-secret-key" required data-placeholder="Enter Secret Key">
-                        <label for="secret-key">Secret Key</label>
+                        <input type="password" id="register-password" required>
+                        <span class="toggle-password" data-target="register-password">👁</span>
+                        <label for="register-password">Password</label>
+                      </div>
+                    <div class="strength-bar"><span id="register-strength"></span></div>
+                    <div class="strength-label" id="register-strength-label"></div>
+                    <small class="password-rules">Password must be at least 8 characters, include uppercase, lowercase, number, and special character.</small>
+                    <div class="input-group">
+                        <input type="password" id="register-secret-key" required>
+                        <span class="toggle-password" data-target="register-secret-key">👁</span>
+                        <label for="register-secret-key">Secret Key</label>
                       </div>
                       
-                    <button type="submit">Register</button>
+                    <button type="submit" id="register-btn" disabled>Register</button>
                     <p id="register-status" style="color: #e08933; margin-top: 10px;"></p>
                 </form>
             </div>
@@ -345,8 +401,14 @@
                 <form id="create-lecturer-form">
                     <input id="create-lecturer-id" placeholder="Lecturer ID" required>
                     <input id="create-name" placeholder="Name" required>
-                    <input id="create-password" type="password" placeholder="Password" required>
-                    <button type="submit">Create Account</button>
+                    <div class="input-group">
+                        <input id="create-password" type="password" placeholder="Password" required>
+                        <span class="toggle-password" data-target="create-password">👁</span>
+                    </div>
+                    <div class="strength-bar"><span id="create-strength"></span></div>
+                    <div class="strength-label" id="create-strength-label"></div>
+                    <small class="password-rules">Password must be at least 8 characters, include uppercase, lowercase, number, and special character.</small>
+                    <button type="submit" id="create-btn" disabled>Create Account</button>
                 </form>
             </section>
 
@@ -382,9 +444,15 @@
                 <form id="edit-form">
                     <input id="edit-lecturer-id" placeholder="Lecturer ID" required>
                     <input id="edit-name" placeholder="Name" required>
-                    <input id="edit-password" type="password" placeholder="Password (leave blank to keep unchanged)">
+                    <div class="input-group">
+                        <input id="edit-password" type="password" placeholder="Password (leave blank to keep unchanged)">
+                        <span class="toggle-password" data-target="edit-password">👁</span>
+                    </div>
+                    <div class="strength-bar"><span id="edit-strength"></span></div>
+                    <div class="strength-label" id="edit-strength-label"></div>
+                    <small class="password-rules">Password must be at least 8 characters, include uppercase, lowercase, number, and special character.</small>
                     <button type="button" id="cancel-edit">Cancel</button>
-                    <button type="submit">Save</button>
+                    <button type="submit" id="edit-btn" disabled>Save</button>
                 </form>
             </div>
         </div>
@@ -404,7 +472,116 @@
    let lecturers = [];
     let editingId = null;
 
+    // keep original validatePasswordStrength function (used in submit handlers)
+    function validatePasswordStrength(password) {
+        const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        return strongRegex.test(password);
+    }
+
+    // enhanced strength meter: returns "empty" | "weak" | "medium" | "strong"
+    // Accepts barId and optional labelId. If labelId omitted, it will attempt to find barId + '-label'.
+    function updateStrengthMeter(password, barId, labelId) {
+        const bar = document.getElementById(barId);
+        const labelElem = labelId ? document.getElementById(labelId) : document.getElementById(barId + '-label');
+        if (!bar) return "empty";
+        bar.className = "";
+        if (!password) {
+            bar.style.width = "0%";
+            if (labelElem) labelElem.textContent = "";
+            return "empty";
+        }
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/\d/.test(password)) strength++;
+        if (/[@$!%*?&]/.test(password)) strength++;
+
+        if (strength <= 2) {
+            bar.style.width = "33%";
+            bar.classList.add("strength-weak");
+            if (labelElem) { labelElem.textContent = "Weak"; labelElem.style.color = "#e63946"; }
+            return "weak";
+        } else if (strength === 3 || strength === 4) {
+            bar.style.width = "66%";
+            bar.classList.add("strength-medium");
+            if (labelElem) { labelElem.textContent = "Medium"; labelElem.style.color = "#f1c40f"; }
+            return "medium";
+        } else {
+            bar.style.width = "100%";
+            bar.classList.add("strength-strong");
+            if (labelElem) { labelElem.textContent = "Strong"; labelElem.style.color = "#2ecc71"; }
+            return "strong";
+        }
+    }
+
+    // toggle show/hide for password inputs (button is the toggle element)
+    function togglePasswordVisibility(button) {
+        const targetId = button.getAttribute("data-target");
+        if (!targetId) return;
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        if (input.type === "password") {
+            input.type = "text";
+            button.textContent = "🙈";
+        } else {
+            input.type = "password";
+            button.textContent = "👁";
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        // strength meter listeners (attach toggles first so elements exist)
+        document.querySelectorAll(".toggle-password").forEach(btn => {
+            btn.addEventListener("click", () => togglePasswordVisibility(btn));
+        });
+
+        // register strength + enable register button only for medium/strong
+        const regPass = document.getElementById("register-password");
+        if (regPass) {
+            regPass.addEventListener("input", (e) => {
+                const level = updateStrengthMeter(e.target.value, "register-strength", "register-strength-label");
+                const rb = document.getElementById("register-btn");
+                if (rb) rb.disabled = !(level === "medium" || level === "strong");
+            });
+            // ensure button disabled at load
+            const rbInit = document.getElementById("register-btn");
+            if (rbInit) rbInit.disabled = true;
+        }
+
+        // create lecturer strength + enable create button only for medium/strong
+        const createPass = document.getElementById("create-password");
+        if (createPass) {
+            createPass.addEventListener("input", (e) => {
+                const level = updateStrengthMeter(e.target.value, "create-strength", "create-strength-label");
+                const cb = document.getElementById("create-btn");
+                if (cb) cb.disabled = !(level === "medium" || level === "strong");
+            });
+            const cbInit = document.getElementById("create-btn");
+            if (cbInit) cbInit.disabled = true;
+        }
+
+        // edit lecturer strength: if blank -> allow Save; if filled require medium/strong
+        const editPass = document.getElementById("edit-password");
+        if (editPass) {
+            editPass.addEventListener("input", (e) => {
+                const val = e.target.value.trim();
+                const eb = document.getElementById("edit-btn");
+                if (!val) {
+                    // no password entered -> keep Save enabled (allow editing other fields)
+                    if (eb) eb.disabled = false;
+                    // clear strength UI
+                    updateStrengthMeter("", "edit-strength", "edit-strength-label");
+                    return;
+                }
+                const level = updateStrengthMeter(val, "edit-strength", "edit-strength-label");
+                if (eb) eb.disabled = !(level === "medium" || level === "strong");
+            });
+            // default state: Save disabled until user interacts (keeps behavior from earlier edits)
+            const ebInit = document.getElementById("edit-btn");
+            if (ebInit) ebInit.disabled = true;
+        }
+
         const token = localStorage.getItem('token');
         const authSection = document.querySelector('.auth-section');
         const adminContent = document.querySelector('.admin-content');
@@ -472,6 +649,11 @@
     const password = document.getElementById('register-password').value.trim();
     const secretKey = document.getElementById('register-secret-key').value.trim();
     const status = document.getElementById('register-status');
+
+    if (!validatePasswordStrength(password)) {
+        status.textContent = "Password must be at least 8 chars, include uppercase, lowercase, number, and special character.";
+        return;
+    }
 
     status.textContent = 'Registering...';
 
@@ -570,6 +752,10 @@
             }
         }
 
+        // Provide an alias so older code calling fetchLecturers() doesn't break
+        // (some earlier pieces call fetchLecturers(); keep compatibility)
+        window.fetchLecturers = loadLecturers;
+
         // Render Lecturers
         function renderLecturers(data) {
             const tableBody = document.getElementById('lecturer-table-body');
@@ -628,6 +814,22 @@
                 renderLecturers(filtered);
             });
 
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.input-group input').forEach(input => {
+            const update = () => {
+                if (input.value.trim() !== '') {
+                    input.classList.add('filled');
+                } else {
+                    input.classList.remove('filled');
+                }
+            };
+            update();
+            input.addEventListener('input', update);
+            input.addEventListener('change', update);
+            setTimeout(update, 200); // catch autofill
+        });
+    });
+
             // Create Lecturer
             document.getElementById('create-lecturer-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -635,6 +837,12 @@
                 const name = document.getElementById('create-name').value.trim();
                 const password = document.getElementById('create-password').value.trim();
                 const token = localStorage.getItem('token');
+
+                if (!validatePasswordStrength(password)) {
+                    alert("Password must be at least 8 chars, include uppercase, lowercase, number, and special character.");
+                    return;
+                }
+
                 try {
                     const response = await fetch('/api/auth/register', {
                             method: 'POST',
@@ -669,6 +877,11 @@
                     document.getElementById('edit-name').value = lec.name;
                     document.getElementById('edit-password').value = '';
                     document.querySelector('.edit-lecturer').classList.add('active');
+                    // when edit modal opens, ensure edit-btn state: allow Save by default if no password
+                    const eb = document.getElementById('edit-btn');
+                    if (eb) eb.disabled = false;
+                    // reset strength UI
+                    updateStrengthMeter("", "edit-strength", "edit-strength-label");
                 }
             }
 
@@ -684,6 +897,11 @@
                 const name = document.getElementById('edit-name').value.trim();
                 const password = document.getElementById('edit-password').value.trim();
                 const body = { lecturerId, name };
+    
+                if (password && !validatePasswordStrength(password)) {
+                    alert("Password must be at least 8 chars, include uppercase, lowercase, number, and special character.");
+                    return;
+                }
                 if (password) body.password = password;
                 const token = localStorage.getItem('token');
                 try {
